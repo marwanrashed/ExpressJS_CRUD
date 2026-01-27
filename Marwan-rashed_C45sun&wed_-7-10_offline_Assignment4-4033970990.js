@@ -13,8 +13,8 @@ const http = require("http");
 const zipIt = require("node:zlib");
 const URL = require("node:url");
 const express = require("express");
+const { error } = require("node:console");
 const app = express();
-
 
 const port = 3000;
 
@@ -51,6 +51,22 @@ function isEmailExist(users, newEmail) {
   }
 }
 
+function responseHandler(response, statusCode, message) {
+  return response.status(statusCode).json({
+    message: message,
+  });
+}
+
+function dataHandler() {
+  let users = {};
+  if (readUsers() == "") {
+    writeUsers(users);
+  } else {
+    users = JSON.parse(readUsers());
+  }
+  return users;
+}
+
 const SuccessStatusCode = 201;
 const ErrorStatusCode = 400;
 const NotFoundStatusCode = 404;
@@ -66,20 +82,74 @@ const ServerErrorMsg = "Server error";
 const InvalidEmailMsg = "User Already Exists please enter another email";
 // Questions Implementation
 
+// data middleware
+app.use(express.json());
 /** Q1. Create an API that adds a new user to your users stored in a JSON file. (ensure that the email of the new user doesn’t exist before)(1
 Grades)
 o URL: POST /users  */
 
+// middleware to check if data is undefined
+const loadUsers = (req, res, next) => {
+  try {
+    req.users = dataHandler();
+    next();
+  } catch (err) {
+    return responseHandler(res, ErrorStatusCode, "Failed to load users");
+  }
+};
 
+const checkDataValidity = (req, res, next) => {
+  if (
+    undefined === req.body.name ||
+    undefined === req.body.age ||
+    undefined === req.body.email
+  ) {
+    return responseHandler(res, ErrorStatusCode, InvalidUserData);
+  } else {
+    next();
+  }
+};
+
+//middleware to for email condition
+const checkEmalExists = (req, res, next) => {
+  if (isEmailExist(req.users, req.body.email)) {
+    return responseHandler(res, ErrorStatusCode, InvalidEmailMsg);
+  } else {
+    next();
+  }
+};
+
+app.post(
+  "/users",
+  loadUsers,
+  checkDataValidity,
+  checkEmalExists,
+  (req, res, next) => {
+    try {
+      console.log(req.users);
+      const newUserId = generateId(req.users);
+      req.users[newUserId] = {
+        id: newUserId,
+        name: req.body.name,
+        age: req.body.age,
+        email: req.body.email,
+      };
+      writeUsers(req.users);
+      responseHandler(res, SuccessStatusCode, UserAddedMsg);
+    } catch (err) {
+      responseHandler(res, ErrorStatusCode, InvalidUrlMsg);
+    }
+  },
+);
 /** Q2. Create an API that updates an existing user's name, age, or email by their ID. The user ID should be retrieved from the params. (1 Grade)
 Note: Remember to update the corresponding values in the JSON file
 o URL: PATCH /user/:id  */
 
+app.patch("/user/:id", (req, res, next) => {});
 
 /** Q3. Create an API that deletes a User by ID. The user id should be retrieved from either the request body or optional params. (1 Grade)
 Note: Remember to delete the user from the file
 o URL: DELETE /user{/:id}  */
-
 
 /** Q4. Create an API that gets a user by their name. The name will be provided as a query parameter. (1 Grade)
 o URL: GET /user/getByName */
@@ -93,7 +163,13 @@ o URL: GET /user/filter */
 /** Q7. Create an API that gets User by ID. (1 Grade)
 o URL: GET /user/:id */
 
-
+// handler of all invalid urls
+app.all("{/*dummy}", (req, res, next) => {
+  responseHandler(res, ErrorStatusCode, InvalidUrlMsg);
+});
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
 /** Part2: ERD Diagram */
 /**
  * 
