@@ -78,6 +78,7 @@ const userReadMsg = "User read successfully!";
 const UserNotFoundMsg = "User not found";
 const InvalidUrlMsg = "Invalid Url";
 const InvalidUserData = "Invalid User Data";
+const loadFailure = "Failed to load users";
 const ServerErrorMsg = "Server error";
 const InvalidEmailMsg = "User Already Exists please enter another email";
 // Questions Implementation
@@ -87,17 +88,16 @@ app.use(express.json());
 /** Q1. Create an API that adds a new user to your users stored in a JSON file. (ensure that the email of the new user doesn’t exist before)(1
 Grades)
 o URL: POST /users  */
-
-// middleware to check if data is undefined
+// middleware to load data
 const loadUsers = (req, res, next) => {
   try {
     req.users = dataHandler();
     next();
   } catch (err) {
-    return responseHandler(res, ErrorStatusCode, "Failed to load users");
+    return responseHandler(res, ErrorStatusCode, loadFailure);
   }
 };
-
+// middleware to check if data is undefined
 const checkDataValidity = (req, res, next) => {
   if (
     undefined === req.body.name ||
@@ -109,7 +109,6 @@ const checkDataValidity = (req, res, next) => {
     next();
   }
 };
-
 //middleware to for email condition
 const checkEmalExists = (req, res, next) => {
   if (isEmailExist(req.users, req.body.email)) {
@@ -156,7 +155,13 @@ o URL: GET /user/getByName */
 
 /** Q5. Create an API that gets all users from the JSON file. (1 Grade)
 o URL: GET /user */
-
+app.get("/user", loadUsers, (req, res, next) => {
+  try {
+    responseHandler(res, SuccessStatusCode, { data: req.users });
+  } catch (err) {
+    responseHandler(res, ErrorStatusCode, InvalidUrlMsg);
+  }
+});
 /** Q6. Create an API that filters users by minimum age. (1 Grade)
 o URL: GET /user/filter */
 
