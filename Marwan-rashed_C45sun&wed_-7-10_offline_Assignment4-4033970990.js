@@ -1,8 +1,8 @@
 /**
- * Assignment 3
+ * Assignment 4
  * Author: Marwan Rashed
  * ID: 4033970990
- * Date: 23/12/2025
+ * Date: 28/01/2025
  */
 // Imports
 const path = require("path");
@@ -69,17 +69,19 @@ const SuccessStatusCode = 201;
 const ErrorStatusCode = 400;
 const NotFoundStatusCode = 404;
 const ServerErrorStatusCode = 500;
-const UserAddedMsg = {message : "User added successfully!"};
-const UserUpdatedMsg = {message : "User updated successfully!"};
-const UserDeletedMsg = {message : "User deleted successfully!"};
-const userReadMsg = {message : "User read successfully!"};
-const UserNotFoundMsg = {message : "User not found"};
-const InvalidUrlMsg = {message : "Invalid Url"};
-const InvalidId = {message : "User ID not found"};
-const InvalidUserData = {message : "Invalid User Data"};
-const loadFailure = {message : "Failed to load users"};
-const ServerErrorMsg = {message : "Server error"};
-const InvalidEmailMsg = {message : "User Already Exists please enter another email"};
+const UserAddedMsg = { message: "User added successfully!" };
+const UserUpdatedMsg = { message: "User updated successfully!" };
+const UserDeletedMsg = { message: "User deleted successfully!" };
+const userReadMsg = { message: "User read successfully!" };
+const UserNotFoundMsg = { message: "User not found" };
+const InvalidUrlMsg = { message: "Invalid Url" };
+const InvalidId = { message: "User ID not found" };
+const InvalidUserData = { message: "Invalid User Data" };
+const loadFailure = { message: "Failed to load users" };
+const ServerErrorMsg = { message: "Server error" };
+const InvalidEmailMsg = {
+  message: "User Already Exists please enter another email",
+};
 // Questions Implementation
 // util functions
 // middleware to load data
@@ -178,27 +180,45 @@ app.patch("/user/:id", (req, res, next) => {
 Note: Remember to delete the user from the file
 o URL: DELETE /user{/:id}  */
 app.delete("/user{/:id}", (req, res, next) => {
-  try{
+  try {
     const userID = Number(req.params.id || req.body.id);
-    if (req.users[userID]){
+    if (req.users[userID]) {
       delete req.users[userID];
       writeUsers(req.users);
       responseHandler(res, SuccessStatusCode, UserDeletedMsg);
     } else {
       responseHandler(res, ErrorStatusCode, InvalidId);
     }
-  }catch(err){
+  } catch (err) {
     responseHandler(res, ErrorStatusCode, InvalidUrlMsg);
   }
 });
 /** Q4. Create an API that gets a user by their name. The name will be provided as a query parameter. (1 Grade)
 o URL: GET /user/getByName */
-
+app.get("/user/getByName", flattenUsersJson, (req, res, next) => {
+  try {
+    const userName = req.query.name;
+    if (userName) {
+      const userJson = req.usersArr.find((user) => user.name === userName);
+      if (userJson) {
+        responseHandler(res, SuccessStatusCode, userJson);
+      } else {
+        responseHandler(res, SuccessStatusCode, {
+          message: "User name not found",
+        });
+      }
+    } else {
+      return responseHandler(res, ErrorStatusCode, InvalidUrlMsg);
+    }
+  } catch (err) {
+    responseHandler(res, ErrorStatusCode, InvalidUrlMsg);
+  }
+});
 /** Q5. Create an API that gets all users from the JSON file. (1 Grade)
 o URL: GET /user */
 app.get("/user", flattenUsersJson, (req, res, next) => {
   // I added the objects into an array to follow the example in the picture provided
-  // in the assignment. 
+  // in the assignment.
   try {
     responseHandler(res, SuccessStatusCode, { data: req.usersArr });
   } catch (err) {
@@ -207,17 +227,39 @@ app.get("/user", flattenUsersJson, (req, res, next) => {
 });
 /** Q6. Create an API that filters users by minimum age. (1 Grade)
 o URL: GET /user/filter */
-
+app.get("/user/filter", flattenUsersJson, (req, res, next) => {
+  try {
+    const userAge = req.query.age;
+    if (userAge) {
+      const userJson = req.usersArr.filter((user) => user.age >= userAge);
+      if (userJson && userJson.length > 0) {
+        if (userJson.length === 1) {
+          // to return a single object instead of an array with one object
+          // to match format in the assignemnt example
+          return responseHandler(res, SuccessStatusCode, userJson[0]);
+        }
+        responseHandler(res, SuccessStatusCode, userJson);
+      } else {
+        responseHandler(res, SuccessStatusCode, {
+          UserNotFoundMsg,
+        });
+      }
+    } else {
+      return responseHandler(res, ErrorStatusCode, InvalidUrlMsg);
+    }
+  } catch (err) {
+    responseHandler(res, ErrorStatusCode, InvalidUrlMsg);
+  }
+});
 /** Q7. Create an API that gets User by ID. (1 Grade)
 o URL: GET /user/:id */
 app.get("/user/:id", flattenUsersJson, (req, res, next) => {
   try {
     const userID = Number(req.params.id);
-    const userJson =  req.usersArr.find((user)=>Number(user.id) === userID);
-    if (userJson){
+    const userJson = req.usersArr.find((user) => Number(user.id) === userID);
+    if (userJson) {
       responseHandler(res, SuccessStatusCode, userJson);
-    }
-    else{
+    } else {
       responseHandler(res, NotFoundStatusCode, UserNotFoundMsg);
     }
   } catch (err) {
@@ -236,7 +278,6 @@ app.listen(port, () => {
  ************************************************ Part 3: Bonus ************************************************
  Problem Solving
  */
-
 /**
  * Bonus Question
  * Solve the problem Longest Common Prefix on LeetCode
