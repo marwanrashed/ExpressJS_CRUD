@@ -28,7 +28,7 @@ function readUsers() {
 }
 
 function writeUsers(users) {
-  fs.writeFileSync("./users.json", JSON.stringify(users));
+  fs.writeFileSync("./users.json", JSON.stringify(users, null, 2));
 }
 
 function generateId(users) {
@@ -77,17 +77,13 @@ const UserDeletedMsg = "User deleted successfully!";
 const userReadMsg = "User read successfully!";
 const UserNotFoundMsg = "User not found";
 const InvalidUrlMsg = "Invalid Url";
+const InvalidId = "User ID not found";
 const InvalidUserData = "Invalid User Data";
 const loadFailure = "Failed to load users";
 const ServerErrorMsg = "Server error";
 const InvalidEmailMsg = "User Already Exists please enter another email";
 // Questions Implementation
-
-// data middleware
-app.use(express.json());
-/** Q1. Create an API that adds a new user to your users stored in a JSON file. (ensure that the email of the new user doesn’t exist before)(1
-Grades)
-o URL: POST /users  */
+// util functions
 // middleware to load data
 const loadUsers = (req, res, next) => {
   try {
@@ -118,33 +114,69 @@ const checkEmalExists = (req, res, next) => {
   }
 };
 
-app.post(
-  "/users",
-  loadUsers,
-  checkDataValidity,
-  checkEmalExists,
-  (req, res, next) => {
-    try {
-      console.log(req.users);
-      const newUserId = generateId(req.users);
-      req.users[newUserId] = {
-        id: newUserId,
-        name: req.body.name,
-        age: req.body.age,
-        email: req.body.email,
-      };
-      writeUsers(req.users);
-      responseHandler(res, SuccessStatusCode, UserAddedMsg);
-    } catch (err) {
-      responseHandler(res, ErrorStatusCode, InvalidUrlMsg);
-    }
-  },
-);
+// incoming data middleware
+app.use(express.json());
+// loading users middleware
+app.use(loadUsers);
+/** Q1. Create an API that adds a new user to your users stored in a JSON file. (ensure that the email of the new user doesn’t exist before)(1
+Grades)
+o URL: POST /users  */
+app.post("/user", checkDataValidity, checkEmalExists, (req, res, next) => {
+  try {
+    console.log(req.users);
+    const newUserId = generateId(req.users);
+    req.users[newUserId] = {
+      id: newUserId,
+      name: req.body.name,
+      age: req.body.age,
+      email: req.body.email,
+    };
+    writeUsers(req.users);
+    responseHandler(res, SuccessStatusCode, UserAddedMsg);
+  } catch (err) {
+    responseHandler(res, ErrorStatusCode, InvalidUrlMsg);
+  }
+});
 /** Q2. Create an API that updates an existing user's name, age, or email by their ID. The user ID should be retrieved from the params. (1 Grade)
 Note: Remember to update the corresponding values in the JSON file
 o URL: PATCH /user/:id  */
 
-app.patch("/user/:id", (req, res, next) => {});
+app.patch("/user/:id", (req, res, next) => {
+  try {
+    const userId = Number(req.params.id);
+    if (req.users[userId]) {
+      if (req.body.name) {
+        req.users[userId].name = req.body.name;
+        responseHandler(
+          res,
+          SuccessStatusCode,
+          "User name updated successfully.",
+        );
+      }
+      if (req.body.age) {
+        req.users[userId].age = req.body.age;
+        responseHandler(
+          res,
+          SuccessStatusCode,
+          "User age updated successfully.",
+        );
+      }
+      if (req.body.email) {
+        req.users[userId].email = req.body.email;
+        responseHandler(
+          res,
+          SuccessStatusCode,
+          "User email updated successfully.",
+        );
+      }
+      writeUsers(req.users);
+    } else {
+      responseHandler(res, ErrorStatusCode, InvalidId);
+    }
+  } catch (err) {
+    responseHandler(res, ErrorStatusCode, InvalidUrlMsg);
+  }
+});
 
 /** Q3. Create an API that deletes a User by ID. The user id should be retrieved from either the request body or optional params. (1 Grade)
 Note: Remember to delete the user from the file
@@ -155,7 +187,7 @@ o URL: GET /user/getByName */
 
 /** Q5. Create an API that gets all users from the JSON file. (1 Grade)
 o URL: GET /user */
-app.get("/user", loadUsers, (req, res, next) => {
+app.get("/user", (req, res, next) => {
   try {
     responseHandler(res, SuccessStatusCode, { data: req.users });
   } catch (err) {
@@ -175,26 +207,6 @@ app.all("{/*dummy}", (req, res, next) => {
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-/** Part2: ERD Diagram */
-/**
- * 
-Musicana records have decided to store information on musicians who perform on their albums in
-a database. The company has wisely chosen to hire you as a database designer.
-o Each musician that is recorded at Musicana has an ID number,a name, an address (street, city) and a
-phone number.
-o Each instrument that is used in songs recorded at Musicana has a unique name and a musical key (e.g.,
-C, B-flat, E-flat).
-o Each album that is recorded at the Musicana label has a unique title, a copyright date, and an album
-identifier.
-o Each song recorded at Musicana has a unique title and an author.
-o Each musician may play several instruments, and a given instrument may be played by several
-musicians.
-o Each album has a number of songs on it, but no song may appear on more than one album.
-o Each song is performed by one or more musicians, and a musician may perform a number of songs.
-o Each album has exactly one musician who acts as its producer.
-o A producer may produce several albums.
-
- */
 
 /**
  ************************************************ Part 3: Bonus ************************************************
