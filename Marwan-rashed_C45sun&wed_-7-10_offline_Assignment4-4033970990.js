@@ -52,9 +52,7 @@ function isEmailExist(users, newEmail) {
 }
 
 function responseHandler(response, statusCode, message) {
-  return response.status(statusCode).json({
-    message: message,
-  });
+  return response.status(statusCode).json(message);
 }
 
 function dataHandler() {
@@ -71,17 +69,17 @@ const SuccessStatusCode = 201;
 const ErrorStatusCode = 400;
 const NotFoundStatusCode = 404;
 const ServerErrorStatusCode = 500;
-const UserAddedMsg = "User added successfully!";
-const UserUpdatedMsg = "User updated successfully!";
-const UserDeletedMsg = "User deleted successfully!";
-const userReadMsg = "User read successfully!";
-const UserNotFoundMsg = "User not found";
-const InvalidUrlMsg = "Invalid Url";
-const InvalidId = "User ID not found";
-const InvalidUserData = "Invalid User Data";
-const loadFailure = "Failed to load users";
-const ServerErrorMsg = "Server error";
-const InvalidEmailMsg = "User Already Exists please enter another email";
+const UserAddedMsg = {message : "User added successfully!"};
+const UserUpdatedMsg = {message : "User updated successfully!"};
+const UserDeletedMsg = {message : "User deleted successfully!"};
+const userReadMsg = {message : "User read successfully!"};
+const UserNotFoundMsg = {message : "User not found"};
+const InvalidUrlMsg = {message : "Invalid Url"};
+const InvalidId = {message : "User ID not found"};
+const InvalidUserData = {message : "Invalid User Data"};
+const loadFailure = {message : "Failed to load users"};
+const ServerErrorMsg = {message : "Server error"};
+const InvalidEmailMsg = {message : "User Already Exists please enter another email"};
 // Questions Implementation
 // util functions
 // middleware to load data
@@ -114,6 +112,19 @@ const checkEmalExists = (req, res, next) => {
   }
 };
 
+//middleware to flatten json file into an array
+const flattenUsersJson = (req, res, next) => {
+  //flatten id entry
+  let usersArr = [];
+  for (const [key, val] of Object.entries(req.users)) {
+    usersArr.push({
+      id: key,
+      ...val,
+    });
+  }
+  req.usersArr = usersArr;
+  next();
+};
 // incoming data middleware
 app.use(express.json());
 // loading users middleware
@@ -145,31 +156,16 @@ app.patch("/user/:id", (req, res, next) => {
   try {
     const userId = Number(req.params.id);
     if (req.users[userId]) {
-      if (req.body.name) {
-        req.users[userId].name = req.body.name;
-        responseHandler(
-          res,
-          SuccessStatusCode,
-          "User name updated successfully.",
-        );
-      }
-      if (req.body.age) {
-        req.users[userId].age = req.body.age;
-        responseHandler(
-          res,
-          SuccessStatusCode,
-          "User age updated successfully.",
-        );
-      }
-      if (req.body.email) {
-        req.users[userId].email = req.body.email;
-        responseHandler(
-          res,
-          SuccessStatusCode,
-          "User email updated successfully.",
-        );
-      }
+      if (req.body.name) req.users[userId].name = req.body.name;
+      if (req.body.age) req.users[userId].age = req.body.age;
+      if (req.body.email) req.users[userId].email = req.body.email;
       writeUsers(req.users);
+      // I am assuming several fields can be updated at once
+      responseHandler(
+        res,
+        SuccessStatusCode,
+        "User data updated successfully.",
+      );
     } else {
       responseHandler(res, ErrorStatusCode, InvalidId);
     }
@@ -181,15 +177,30 @@ app.patch("/user/:id", (req, res, next) => {
 /** Q3. Create an API that deletes a User by ID. The user id should be retrieved from either the request body or optional params. (1 Grade)
 Note: Remember to delete the user from the file
 o URL: DELETE /user{/:id}  */
-
+app.delete("/user{/:id}", (req, res, next) => {
+  try{
+    const userID = Number(req.params.id || req.body.id);
+    if (req.users[userID]){
+      delete req.users[userID];
+      writeUsers(req.users);
+      responseHandler(res, SuccessStatusCode, UserDeletedMsg);
+    } else {
+      responseHandler(res, ErrorStatusCode, InvalidId);
+    }
+  }catch(err){
+    responseHandler(res, ErrorStatusCode, InvalidUrlMsg);
+  }
+});
 /** Q4. Create an API that gets a user by their name. The name will be provided as a query parameter. (1 Grade)
 o URL: GET /user/getByName */
 
 /** Q5. Create an API that gets all users from the JSON file. (1 Grade)
 o URL: GET /user */
-app.get("/user", (req, res, next) => {
+app.get("/user", flattenUsersJson, (req, res, next) => {
+  // I added the objects into an array to follow the example in the picture provided
+  // in the assignment. 
   try {
-    responseHandler(res, SuccessStatusCode, { data: req.users });
+    responseHandler(res, SuccessStatusCode, { data: req.usersArr });
   } catch (err) {
     responseHandler(res, ErrorStatusCode, InvalidUrlMsg);
   }
@@ -199,7 +210,20 @@ o URL: GET /user/filter */
 
 /** Q7. Create an API that gets User by ID. (1 Grade)
 o URL: GET /user/:id */
-
+app.get("/user/:id", flattenUsersJson, (req, res, next) => {
+  try {
+    const userID = Number(req.params.id);
+    const userJson =  req.usersArr.find((user)=>Number(user.id) === userID);
+    if (userJson){
+      responseHandler(res, SuccessStatusCode, userJson);
+    }
+    else{
+      responseHandler(res, NotFoundStatusCode, UserNotFoundMsg);
+    }
+  } catch (err) {
+    responseHandler(res, ErrorStatusCode, InvalidUrlMsg);
+  }
+});
 // handler of all invalid urls
 app.all("{/*dummy}", (req, res, next) => {
   responseHandler(res, ErrorStatusCode, InvalidUrlMsg);

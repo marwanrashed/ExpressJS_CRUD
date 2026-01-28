@@ -16,17 +16,5 @@
     "name": "marwan",
     "age": 37,
     "email": "marwan@example.com"
-  },
-  "5": {
-    "id": 5,
-    "name": "hossam",
-    "age": 37,
-    "email": "hoss@example.com"
-  },
-  "6": {
-    "id": 6,
-    "name": "mani",
-    "age": 37,
-    "email": "hosss@example.com"
   }
 }
